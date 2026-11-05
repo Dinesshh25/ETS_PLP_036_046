@@ -19,3 +19,12 @@ def test_bug_1_keyword_case_insensitive():
         ("WHERE", T.KEYWORD),
     ]
 
+
+def test_bug_2_operator_not_equal():
+    """Bug 2: Operator '<>' harus di-scan sebagai satu token OP '<>', bukan terbelah '<' dan '>'."""
+    tokens = tokenize("catatan <> 'rahasia'")
+    op_tokens = [t for t in tokens if t.type == T.OP]
+    assert len(op_tokens) == 1
+    assert op_tokens[0].value == "<>"
+
+

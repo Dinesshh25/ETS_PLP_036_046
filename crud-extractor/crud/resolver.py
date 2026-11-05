@@ -170,6 +170,7 @@ class Resolver:
                 self._expr(arg)
 
     def _column(self, col: ast.ColumnRef) -> None:
+        # membaca scope dari paling dalam ke paling luar, mencari qualifier (alias) yang cocok. mengikuti bagian 4.3 dari SPESIFIKASI.md.
         if col.qualifier is not None:
             entry = self._lookup(col.qualifier)
             if entry is None:
@@ -179,22 +180,17 @@ class Resolver:
             return
         else: 
             current_scope = self.scope.entries
-            
-            # 2. Hitung jumlah tabel/sumber yang ada di scope tersebut
+
             jumlah_tabel = len(current_scope)
             
             if jumlah_tabel == 1:
-                # Tepat satu tabel di scope terdalam -> isi col.resolved
-                # Ekstrak satu-satunya entri dari dictionary scope tersebut
                 entry = list(current_scope.values())[0]
                 col.resolved = _target_of(entry)
                 
             elif jumlah_tabel > 1:
-                # Lebih dari satu tabel -> tampilkan warning, col.resolved tetap None
                 self._warning(f"kolom '{col.name}' ambigu tanpa skema", col.line)
                 
-            else:
-                # Tidak ada tabel sama sekali -> tampilkan warning
+            else:   
                 self._warning(f"kolom '{col.name}' tidak memiliki tabel rujukan", col.line)
         
         # TODO(T2): kolom tanpa qualifier (SPESIFIKASI.md bagian 4.3).

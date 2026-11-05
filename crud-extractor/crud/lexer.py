@@ -131,7 +131,14 @@ class Lexer:
             self._add(TokenType.OP, ch, line, col)
             return
         if ch == "<":
-            op = "<=" if self._match("=") else "<"
+            # Bug 2: Terapkan maximal munch (SPESIFIKASI.md bagian 2.5).
+            # Cek apakah '<' diikuti '=' (<=) atau '>' (<>), jika tidak maka '<' biasa.
+            if self._match("="):
+                op = "<="
+            elif self._match(">"):
+                op = "<>"  # Operator tidak sama dengan: diambil sebagai 1 token utuh, bukan '<' lalu '>'
+            else:
+                op = "<"
             self._add(TokenType.OP, op, line, col)
             return
         if ch == ">":

@@ -39,27 +39,30 @@ AI tidak membantu menemukan bug ini karena sebelumnya sudah ada tes yang menguji
 
 ## Bug 2: (Operator <> terbelah)
 
-**Ditemukan oleh:** (nama) · **Diperbaiki oleh:** (nama)
+**Ditemukan oleh:** Alifah · **Diperbaiki oleh:** Alifah
 
 **Gejala.** Input, output yang didapat, dan output yang diharapkan menurut SPESIFIKASI.md
-(sebutkan bagiannya).
+Query dengan operator <>, misalnya WHERE status <> 'BATAL', gagal di-parse dengan pesan "Baris 1, kolom 27: diharapkan ekspresi, ditemukan '>'". Menurut SPESIFIKASI.md bagian 2.5, lexer harus mengambil operator terpanjang yang cocok (maximal munch), jadi <> seharusnya jadi satu token OP '<>'.
 
 **Reproduksi minimal.** SQL terpendek yang memicu bug:
 
 ```sql
-
+SELECT id FROM t WHERE a <> 1;
 ```
 
 **Akar masalah.** Mengapa kode lama salah? Konsep apa yang dilanggar?
+Di _scan_token() pada crud/lexer.py, saat lexer ketemu < dia cuma mengecek apakah karakter berikutnya =. Karakter > tidak pernah dicek, jadi <> terpecah jadi dua token: < lalu >. Parser menerima < sebagai operator perbandingan, lalu menunggu operand di sebelah kanan, tapi yang datang malah >, yang tidak bisa jadi awal ekspresi. Jadi sumber masalahnya ada di lexer, sedangkan error-nya baru kelihatan di parser. Ini soal lexeme yang harus dibaca selengkap mungkin, seperti di Bab 4 (Scanning) bagian operator dua karakter.
 
 **Perbaikan.** File dan fungsi yang diubah, serta alasannya. Sebutkan juga perbaikan
-alternatif yang kalian pertimbangkan dan alasan tidak memilihnya.
+Di _scan_token() pada crud/lexer.py, ditambahkan cabang untuk > setelah <, sehingga <> jadi satu token. Alternatif yang ditolak: menggabungkan < dan > di parser. Ditolak karena memecah dan menggabung token itu tugas lexer, dan spesifikasi mengharuskan lexer selesai dulu sebelum parser jalan.
 
 **Test regresi.** Nama test di `tests/test_tambahan.py` yang gagal sebelum perbaikan dan lulus
 sesudahnya.
+test_bug_2_operator_not_equal di tests/test_tambahan.py
 
 **Peran AI.** Apakah AI membantu menemukan atau memperbaiki bug ini? Bagaimana kalian
 memverifikasinya?
+AI membantu menemukan bug dan menyusun tes. Diverifikasi dengan menjalankan pytest sebelum dan sesudah perbaikan, lalu dicocokkan lagi dengan Bab 4 di Crafting Interpreters.
 
 ---
 
