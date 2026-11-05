@@ -170,6 +170,7 @@ class Resolver:
                 self._expr(arg)
 
     def _column(self, col: ast.ColumnRef) -> None:
+        # membaca scope dari paling dalam ke paling luar, mencari qualifier (alias) yang cocok. mengikuti bagian 4.3 dari SPESIFIKASI.md.
         if col.qualifier is not None:
             entry = self._lookup(col.qualifier)
             if entry is None:
