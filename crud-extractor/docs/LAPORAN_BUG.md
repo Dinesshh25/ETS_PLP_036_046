@@ -32,7 +32,8 @@ test_bug_1_keyword_case_insensitive di tests/test_tambahan.py
 
 **Peran AI.** Apakah AI membantu menemukan atau memperbaiki bug ini? Bagaimana kalian
 memverifikasinya?
-AI tidak membantu menemukan bug ini karena sebelumnya sudah ada tes yang menguji hal tersebut.
+AI tidak membantu menemukan bug ini karena sebelumnya sudah ada tes yang menguji hal tersebut, membantu verifikasi apakah penyelesaian dengan ubah ke uppercase sudah cocok/sesuai dan menyusun tes.
+Diverifikasi dengan menyesuaikan spesifikasi dan menjalankan pytest.
 ---
 
 ---
@@ -62,7 +63,8 @@ test_bug_2_operator_not_equal di tests/test_tambahan.py
 
 **Peran AI.** Apakah AI membantu menemukan atau memperbaiki bug ini? Bagaimana kalian
 memverifikasinya?
-AI membantu menemukan bug dan menyusun tes. Diverifikasi dengan menjalankan pytest sebelum dan sesudah perbaikan, lalu dicocokkan lagi dengan Bab 4 di Crafting Interpreters.
+AI membantu menemukan bug dan menyusun tes.
+Diverifikasi dengan menjalankan pytest sebelum dan sesudah perbaikan, lalu dicocokkan lagi dengan spesifikasi.
 
 ---
 
@@ -70,27 +72,33 @@ AI membantu menemukan bug dan menyusun tes. Diverifikasi dengan menjalankan pyte
 
 ## Bug 3: (Escape quote beruntun '')
 
-**Ditemukan oleh:** (nama) · **Diperbaiki oleh:** (nama)
+**Ditemukan oleh:** Alifah · **Diperbaiki oleh:** Alifah
 
 **Gejala.** Input, output yang didapat, dan output yang diharapkan menurut SPESIFIKASI.md
-(sebutkan bagiannya).
+String yang isinya dua kutip tunggal berturut-turut, misalnya 'O''Brien', malah kepotong jadi dua token STRING: 'O' dan 'Brien'. Akibatnya parser error: "Baris 1, kolom 11: diharapkan FROM, ditemukan 'Brien'". Padahal di SPESIFIKASI.md bagian 2.4, '' di dalam string itu artinya satu karakter kutip, jadi hasilnya harusnya satu token STRING dengan nilai O'Brien.
 
 **Reproduksi minimal.** SQL terpendek yang memicu bug:
 
 ```sql
-
+SELECT 'O''Brien' FROM pelanggan;
 ```
 
 **Akar masalah.** Mengapa kode lama salah? Konsep apa yang dilanggar?
+Di _string() lexer, begitu ketemu kutip tunggal langsung berhenti (break), nggak ngecek karakter setelahnya. Jadi kutip pertama dari '' dianggap penutup string. Harusnya dicek dulu pakai peek: kalau karakter berikutnya juga kutip, itu bukan penutup tapi escape. Karena stringnya sudah kepotong di lexer, errornya baru kelihatan di parser. Ini nyambung ke Bab 4, soal lexer yang kadang perlu ngintip satu karakter ke depan buat nentuin lexeme-nya selesai atau belum.
 
 **Perbaikan.** File dan fungsi yang diubah, serta alasannya. Sebutkan juga perbaikan
 alternatif yang kalian pertimbangkan dan alasan tidak memilihnya.
+Di _string(), pas ketemu kutip tunggal aku cek self._peek(). Kalau karakter berikutnya juga kutip tunggal, maju satu karakter (self._advance()) dan masukin satu ' ke isi string. Kalau bukan, baru stop.
+Alternatif yang ditolak: Pakai .replace("''", "'") setelah tokenisasi, tapi tidak jadi karena stringnya sudah keburu jadi dua token di lexer, jadi tidak ada yang bisa diganti.
 
 **Test regresi.** Nama test di `tests/test_tambahan.py` yang gagal sebelum perbaikan dan lulus
 sesudahnya.
+test_bug_3_string_escaped_quote di tests/test_tambahan.py
 
 **Peran AI.** Apakah AI membantu menemukan atau memperbaiki bug ini? Bagaimana kalian
 memverifikasinya?
+Membantu merancang logika lookahead self._peek() == "'" pada _string() dan menulis test regresi dengan beragam variasi kutip tunggal ganda.
+Diverifikasi dengan menyesuaikan spesifikasi dan menjalankan pytest.
 
 ---
 

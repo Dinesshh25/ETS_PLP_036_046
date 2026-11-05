@@ -85,15 +85,15 @@ class Resolver:
             self._declare(source.alias, None, source.line)
 
     def _lookup(self, name: str) -> ScopeEntry | None:
-        """Cari nama di rantai scope."""
-        chain = []
+        """Cari nama di rantai scope mulai dari scope terdalam ke luar (SPESIFIKASI.md bagian 4.3).
+        Scope terdalam dicek lebih dulu agar alias di subquery menutupi alias luar (shadowing),
+        dan jika tidak ada, merambat ke scope parent (mendukung correlated subquery).
+        """
         scope = self.scope
         while scope is not None:
-            chain.append(scope)
-            scope = scope.parent
-        for scope in reversed(chain):
             if name in scope.entries:
                 return scope.entries[name]
+            scope = scope.parent
         return None
 
     # ---- statement ------------------------------------------------------
