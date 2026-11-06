@@ -4,7 +4,7 @@ Catat setiap penggunaan AI atau coding agent yang memengaruhi kode atau laporan.
 
 | No | Siapa | Prompt / tugas (ringkas) | Hasil: diterima, diubah, atau ditolak | Alasan | Cara verifikasi |
 | --- | --- | --- | --- | --- | --- |
-| 1 | | Ganesh| Memberikan saran untuk menyelesaikan TODO 1 dan bagaimana aku membuat kodenya jika aku sudah tau bahwa alurnya harus  | | |
+| 1 | Ganesh | Memberikan saran untuk menyelesaikan TODO 1 dan bagaimana aku membuat kodenya jika aku sudah tau bahwa alurnya harus mendelegasikan parsing ke subquery. | Diterima | Kode contoh dari AI sesuai dengan spesifikasi grammar INSERT, yaitu menyimpan hasil parsing SELECT sebagai 'source'. | Jalankan pytest dan cek hasil visualisasi AST melalui CLI `--ast`. |
 | 2 | Alifah | Breakdown tugas: isi PDF, spesifikasi, TODO, deliverable, urutan kerja | Diterima | Biar paham tugas sebelum mulai | Dicocokkan dengan PDF tugas, SPESIFIKASI.md, dan template docs/ |
 | 3 | Alifah | Penjelasan alur program (lexer sampai CSV) dengan contoh output CLI | Diterima | Biar paham bentuk input dan output | Dicocokkan dengan hasil menjalankan CLI |
 | 4 | Alifah | Alur memindai komentar blok /* ... */ (T3): baris/kolom saat \n dan error kalau tidak ditutup | Diubah | Alurnya benar (cek * lalu /, LexError kalau sampai EOF). Tapi nama fungsi di contoh kodenya tidak ada di lexerku (_is_at_end, _peek_next, _add_token), jadi aku pakai yang ada: _at_end, _peek(1), _advance | pytest dan cocokkan SPESIFIKASI 2.3 |
@@ -13,6 +13,10 @@ Catat setiap penggunaan AI atau coding agent yang memengaruhi kode atau laporan.
 | 7 | Alifah | Alias x.total di subquery terikat ke tabel luar, apakah reversed(chain) di _lookup() melanggar lexical scoping (Bab 11)? | Diubah | AI mengonfirmasi dan memberi dua cara. Aku pilih Cara A (while scope is not None) dan sesuaikan nama atributnya (entries). Cara B (hapus reversed) juga benar, tapi tidak aku pakai | pytest, --ast, dan cocokkan SPESIFIKASI 4.3 |
 | 8 | Alifah | DELETE FROM sesi s lalu SELECT s.id FROM pengguna u tidak error, _delete() punya _push() tanpa _pop(), kenapa bocor? | Diubah | Penjelasan push-pop dan isolasi antar-statement diterima. Contoh perbaikan dengan try/finally dan nama yang tidak ada di kode tidak di pakai, cukup menambah self._pop() di akhir _delete() | pytest, --ast, dan cocokkan SPESIFIKASI 4.5 |
 | 9 | Alifah | Cara melaporkan diagnostik alias ganda di scope yang sama | Ditolak | Resolver sudah melaporkan alias ganda, jadi tidak ada yang perlu ditambah | Jalankan SQL dengan alias ganda dan lihat diagnostiknya |
+| 10 | Ganesh | Tanya kenapa statement valid setelah error sintaks ikut terbuang (Bug 4 - Panic Mode) dan di mana titik sinkronisasinya. | Diterima | AI menyarankan penggunaan token titik koma (;) dan awalan statement baru sebagai titik henti (sinkronisasi) pembuangan token. | Menjalankan `test_bug4_panic_mode_recovery` di pytest. |
+| 11 | Ganesh | Tanya cara memisahkan evaluasi AND dan OR di parser agar tidak sejajar (Bug 5 - Presedensi). | Diterima | AI menjelaskan perlunya memecah aturan grammar tingkat logika ke dua fungsi berbeda (`_or_expr` dan `_and_expr`) sesuai buku Bab 6. | Jalankan `test_bug5_presedensi_and_or`. |
+| 12 | Ganesh | (Bug 6 - LEFT OUTER JOIN). | Tidak Pakai AI | Murni dikerjakan mandiri dengan memodifikasi pemanggilan opsional `OUTER` di dalam fungsi `_join()`. | Baca aturan rekursif SPESIFIKASI.md bagian 3 (Grammar) dan jalankan tes. |
+| 13 | Ganesh | Subquery di UPDATE salah ditandai "U" (Bug 9), tanya darimana bocornya status operasi ini. | Diterima | AI membantu melacak adanya pewarisan jenis operasi ke dalam subquery dan memberi ide memaksakan parameter "R" di fungsi `_collect`. | Jalankan `test_bug9_update_subquery_read` dan lihat hasil triple matrix. |
 
 
 **Refleksi (3-5 kalimat).** Di bagian mana AI paling membantu? Di mana AI keliru atau

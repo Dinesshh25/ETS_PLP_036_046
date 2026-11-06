@@ -34,7 +34,7 @@ test_bug_1_keyword_case_insensitive di tests/test_tambahan.py
 memverifikasinya?
 AI tidak membantu menemukan bug ini karena sebelumnya sudah ada tes yang menguji hal tersebut, membantu verifikasi apakah penyelesaian dengan ubah ke uppercase sudah cocok/sesuai dan menyusun tes.
 Diverifikasi dengan menyesuaikan spesifikasi dan menjalankan pytest.
----
+
 
 ---
 
@@ -67,7 +67,7 @@ memverifikasinya?
 AI mengonfirmasi bahwa ini pelanggaran maximal munch dan menjelaskan struktur cabang untuk < serta menyusun tes.
 Diverifikasi dengan menjalankan pytest, lalu dicocokkan lagi dengan spesifikasi.
 
----
+
 
 ---
 
@@ -101,7 +101,6 @@ memverifikasinya?
 Membantu merancang logika lookahead self._peek() == "'" pada _string() dan menulis test dengan beragam variasi kutip tunggal ganda.
 Diverifikasi dengan menyesuaikan spesifikasi dan menjalankan pytest.
 
----
 
 ---
 
@@ -110,7 +109,7 @@ Diverifikasi dengan menyesuaikan spesifikasi dan menjalankan pytest.
 **Ditemukan oleh:** Ganesh · **Diperbaiki oleh:** Ganesh
 
 **Gejala.** Input, output yang didapat, dan output yang diharapkan menurut SPESIFIKASI.md
-Saat parser menemukan statement yang tidak didukung atau sintaks yang salah, proses recovery lama terus membuang token sampai EOF. Akibatnya statement valid setelah titik aman (misalnya setelah `;`) ikut hilang dan tidak dianalisis. Perilaku yang diharapkan: parser tetap mencatat kesalahan pada statement yang rusak, lalu melanjutkan parsing dari statement berikutnya.
+Saat program mem-parsing beberapa pernyataan (statement) SQL dan menemukan satu pernyataan yang salah sintaks, pernyataan valid yang berada di bawahnya ikut terhapus dan tidak diproses sama sekali. Seharusnya, program hanya mencatat error pada pernyataan yang rusak, lalu melanjutkan proses membaca pada pernyataan berikutnya..
 
 **Reproduksi minimal.** SQL terpendek yang memicu bug:
 
@@ -119,22 +118,19 @@ SELECT department_id FROM departments EXCEPT SELECT department_id FROM employees
 ```
 
 **Akar masalah.** Mengapa kode lama salah? Konsep apa yang dilanggar?
-Di `_synchronize()` pada `crud/parser.py`, parser hanya maju terus sampai EOF setelah `ParseError`. Token batas statement dan awal statement berikutnya tidak diperlakukan sebagai titik aman. Ini bertentangan dengan panic-mode recovery pada *Crafting Interpreters* Bab 6 (Parsing Expressions), yang menggunakan titik sinkronisasi agar parser dapat melanjutkan setelah error tanpa mengorbankan input valid berikutnya.
+Masalah ini terletak pada fungsi _synchronize() di modul parser. Ketika menemukan error, fungsi tersebut terus membuang token hingga mencapai batas akhir file (EOF). Hal ini melanggar konsep panic-mode recovery yang dijelaskan dalam buku Crafting Interpreters Bab 6 (Parsing). Berdasarkan konsep tersebut, parser seharusnya mencari titik henti atau sinkronisasi (seperti tanda titik koma) agar bisa pulih dari error dan melanjutkan proses tanpa mengorbankan input yang masih benar.
 
 **Perbaikan.** File dan fungsi yang diubah, serta alasannya. Sebutkan juga perbaikan
-alternatif yang kalian pertimbangkan dan alasan tidak memilihnya.
-Di `_synchronize()` pada `crud/parser.py`, recovery sekarang berhenti setelah `;` atau sebelum keyword awal statement (`SELECT`, `INSERT`, `UPDATE`, `DELETE`). Token awal statement berikutnya dibiarkan untuk putaran parsing berikutnya.
-Alternatif yang ditolak: mengabaikan seluruh sisa input setelah error. Itu memang menghindari error beruntun, tetapi membuang statement valid dan mencegah analisis parsial.
+Fungsi _synchronize() dimodifikasi agar berhenti membuang token ketika menemukan tanda titik koma (;) atau saat melihat kata kunci awal pernyataan baru (seperti SELECT, INSERT, dll).
+Alternatif yang ditolak: Mengabaikan seluruh sisa teks sepenuhnya setelah error pertama. Meskipun lebih sederhana, pendekatan ini merugikan karena menyebabkan perintah valid setelahnya gagal diekstrak.
 
-**Test regresi.** Nama test di `tests/test_tambahan.py` yang gagal sebelum perbaikan dan lulus
-sesudahnya.
-`test_next_statement` memastikan satu parse error tetap tercatat dan statement `SELECT` setelah `EXCEPT` tetap dianalisis sebagai pembacaan tabel `employees`.
+**Test regresi.** `test_next_statement` di `tests/test_tambahan.py`.
 
 **Peran AI.** Apakah AI membantu menemukan atau memperbaiki bug ini? Bagaimana kalian
 memverifikasinya?
-AI membantu merumuskan titik sinkronisasi dan menambahkan pemeriksaan regresi. Diverifikasi dengan menjalankan `python -m pytest crud-extractor/tests/test_tambahan.py` (9 tes lulus).
+AI membantu merumuskan token apa saja yang tepat untuk dijadikan titik sinkronisasi dan membantu menyusun kerangka kode tes regresinya.
 
----
+
 
 ---
 
@@ -142,8 +138,8 @@ AI membantu merumuskan titik sinkronisasi dan menambahkan pemeriksaan regresi. D
 
 **Ditemukan oleh:** Ganesh · **Diperbaiki oleh:** Ganesh
 
-**Gejala.** Input, output yang didapat, dan output yang diharapkan menurut SPESIFIKASI.md
-Parser memperlakukan `AND` dan `OR` dengan presedensi yang sama sehingga ekspresi digabungkan dari kiri ke kanan. Dalam ekspresi `a = 1 OR b = 2 AND c = 3`, hasilnya menjadi `(a = 1 OR b = 2) AND c = 3`, padahal `AND` harus dievaluasi lebih dahulu: `a = 1 OR (b = 2 AND c = 3)`.
+**Gejala.** Input, output yang didapat, dan output yang diharapkan menurut SPESIFIKASI.md \
+Ketika sebuah kueri menggunakan operator AND dan OR secara bersamaan, parser menganggap keduanya memiliki tingkat prioritas yang sama. Akibatnya, ekspresi a = 1 OR b = 2 AND c = 3 dievaluasi mendatar dari kiri ke kanan menjadi (a = 1 OR b = 2) AND c = 3. Padahal, operasi AND seharusnya dikerjakan lebih dahulu.
 
 **Reproduksi minimal.** SQL terpendek yang memicu bug:
 
@@ -152,22 +148,18 @@ SELECT id FROM t WHERE a = 1 OR b = 2 AND c = 3;
 ```
 
 **Akar masalah.** Mengapa kode lama salah? Konsep apa yang dilanggar?
-Di `_logical()` pada `crud/parser.py`, loop lama menangani `AND` dan `OR` pada satu tingkat grammar. Karena itu AST dibentuk berurutan dari kiri ke kanan dan tidak mencerminkan presedensi operator. Ini terkait Bab 6 *Crafting Interpreters*: aturan grammar ekspresi perlu memisahkan tingkat presedensi operator.
+Pada kode bawaan, fungsi `_logical()` memproses `AND` dan `OR` di dalam satu tingkatan perulangan yang sama. Akibatnya, Abstract Syntax Tree (AST) yang dibentuk tidak mencerminkan prioritas operasi. Sesuai dengan penjelasan pada buku Crafting Interpreters Bab 5 (Grammar & AST) dan Bab 6 (Parser), aturan tata bahasa harus dipisah menjadi lapisan-lapisan yang berbeda agar tingkat prioritas operator (presedensi) dievaluasi dengan benar.
 
-**Perbaikan.** File dan fungsi yang diubah, serta alasannya. Sebutkan juga perbaikan
-alternatif yang kalian pertimbangkan dan alasan tidak memilihnya.
-Di `crud/parser.py`, `_logical()` sekarang menangani `OR` dan memanggil `_logical_and()` untuk operand-operandnya; `_logical_and()` menangani `AND`. Dengan grammar berlapis ini, `AND` mengikat lebih kuat daripada `OR`.
-Alternatif yang ditolak: mengubah AST setelah parsing untuk memindahkan cabang `AND`. Itu lebih rumit dan rapuh daripada membentuk AST sesuai presedensi sejak parser.
+**Perbaikan.** File dan fungsi yang diubah, serta alasannya. Sebutkan juga perbaikan alternatif yang kalian pertimbangkan dan alasan tidak memilihnya.\
+Fungsi tersebut dipisah menjadi dua. Saat ini `_logical()` hanya bertugas menangani `OR` (tingkat prioritas lebih rendah). Di dalamnya, fungsi tersebut akan memanggil fungsi baru bernama `_logical_and()` yang khusus mengevaluasi `AND`. Dengan tata bahasa yang berlapis ini, `AND` akan diproses lebih dalam dan mengikat lebih kuat.
+Alternatif yang ditolak: Mengubah susunan cabang setelah struktur AST selesai dibuat. Pendekatan ini ditolak karena rumit dan rawan kesalahan; prioritas sebaiknya langsung dibentuk sejak tahap parsing.
 
-**Test regresi.** Nama test di `tests/test_tambahan.py` yang gagal sebelum perbaikan dan lulus
-sesudahnya.
+**Test regresi.** Nama test di `tests/test_tambahan.py` yang gagal sebelum perbaikan dan lulus sesudahnya.\
 `test_and_or` memeriksa bahwa node terluar adalah `OR` dan anak kanannya adalah `AND`.
 
-**Peran AI.** Apakah AI membantu menemukan atau memperbaiki bug ini? Bagaimana kalian
-memverifikasinya?
-AI membantu memisahkan aturan grammar `OR` dan `AND` serta menyusun pemeriksaan bentuk AST. Diverifikasi dengan menjalankan `python -m pytest crud-extractor/tests/test_tambahan.py` (9 tes lulus).
+**Peran AI.** Apakah AI membantu menemukan atau memperbaiki bug ini? Bagaimana kalian memverifikasinya?\
+AI memberikan panduan bahwa aturan tata bahasa harus dipisah untuk mendapatkan presedensi yang tepat dan membantu merancang kasus uji untuk memvalidasi struktur pohon AST-nya.
 
----
 
 ---
 
@@ -176,7 +168,7 @@ AI membantu memisahkan aturan grammar `OR` dan `AND` serta menyusun pemeriksaan 
 **Ditemukan oleh:** Ganesh · **Diperbaiki oleh:** Ganesh
 
 **Gejala.** Input, output yang didapat, dan output yang diharapkan menurut SPESIFIKASI.md
-Query dengan `LEFT OUTER JOIN` gagal diparse karena parser mengharapkan keyword `JOIN` langsung setelah `LEFT`. Sintaks tersebut seharusnya diterima dan direpresentasikan sebagai join bertipe `LEFT`.
+Kueri yang menggunakan klausa `LEFT OUTER JOIN` menghasilkan pesan error karena program secara kaku mengharapkan kata kunci `JOIN` muncul tepat setelah kata `LEFT`.
 
 **Reproduksi minimal.** SQL terpendek yang memicu bug:
 
@@ -185,20 +177,18 @@ SELECT * FROM a LEFT OUTER JOIN b ON a.id = b.id;
 ```
 
 **Akar masalah.** Mengapa kode lama salah? Konsep apa yang dilanggar?
-Di `_join()` pada `crud/parser.py`, parser sudah mengenali `LEFT`, tetapi tidak mengonsumsi keyword opsional `OUTER` sebelum mengharapkan `JOIN`. Akibatnya token `OUTER` menyebabkan parse error. Ini merupakan kekurangan pada aturan grammar JOIN yang diterapkan parser (Bab 6 *Crafting Interpreters* membahas penggunaan grammar untuk menentukan bentuk sintaks yang diterima).
+Fungsi `_join()` pada `crud/parser.py` tidak memberikan ruang untuk kata opsional. Setelah membaca token `LEFT`, fungsi langsung memaksa pencarian kata `JOIN` tanpa mengecek kehadiran kata `OUTER`. Hal ini merupakan kekurangan dalam penerapan logika di buku Crafting Interpreters Bab 6 (Parser), di mana parser seharusnya dirancang untuk dapat mengakomodasi sintaks opsional sebelum memvalidasi kata kunci utamanya.
 
-**Perbaikan.** File dan fungsi yang diubah, serta alasannya. Sebutkan juga perbaikan
-alternatif yang kalian pertimbangkan dan alasan tidak memilihnya.
-Di `_join()` pada `crud/parser.py`, setelah mengenali `LEFT`, parser kini mencoba mengonsumsi `OUTER` secara opsional sebelum mengharapkan `JOIN`. Nilai jenis join tetap `LEFT`, dan `LEFT JOIN` tanpa `OUTER` tetap diterima.
-Alternatif yang ditolak: menambahkan `OUTER` sebagai jenis join terpisah. `OUTER` hanya kata opsional pada sintaks ini; jenis operasinya tetap `LEFT`.
+**Perbaikan.** File dan fungsi yang diubah, serta alasannya. Sebutkan juga perbaikan alternatif yang kalian pertimbangkan dan alasan tidak memilihnya.\
+Pada fungsi `_join()`, setelah kata `LEFT` cocok, ditambahkan satu baris kode untuk mendeteksi dan mengabaikan token `OUTER` secara opsional sebelum program memeriksa kehadiran token `JOIN`.
+Alternatif yang ditolak: Membuat jenis join baru khusus untuk `OUTER`. Keputusan ini ditolak karena secara konsep operasinya tetap berupa `LEFT` join; kata `OUTER` hanya bersifat tambahan sintaks.
 
 **Test regresi.** Nama test di `tests/test_tambahan.py` yang gagal sebelum perbaikan dan lulus
 sesudahnya.
 `test_left_outer_join` memastikan tidak ada parse error dan jenis join pada AST bernilai `LEFT`.
 
-**Peran AI.** Apakah AI membantu menemukan atau memperbaiki bug ini? Bagaimana kalian
-memverifikasinya?
-AI membantu menentukan bahwa `OUTER` perlu diterima secara opsional, lalu menyusun tes regresi. Diverifikasi dengan menjalankan `python -m pytest crud-extractor/tests/test_tambahan.py` (9 tes lulus).
+**Peran AI.** Apakah AI membantu menemukan atau memperbaiki bug ini? Bagaimana kalian memverifikasinya?\
+Tidak ada penggunaan AI untuk menemukan atau memperbaiki bug ini. Pemecahan masalah dan verifikasi dilakukan murni dengan mencocokkan kode terhadap dokumen SPESIFIKASI.md secara mandiri dan menjalankan evaluasi pengujian.
 
 ---
 
@@ -232,11 +222,10 @@ memverifikasinya?
 AI membantu nunjukin bagian reversed(chain) yang bikin urutan pencarian kebalik, dan bantu nyusun test nya.
 Diverifikasi dengan menyesuaikan spesifikasi dan menjalankan pytest serta lihat hasil resolusi di --ast.
 
----
 
 ---
 
-## Bug 8: Bug 8: Alias DELETE bocor ke statement berikutnya (scope tidak di-pop)
+## Bug 8: Alias DELETE bocor ke statement berikutnya (scope tidak di-pop)
 
 **Ditemukan oleh:** Alifah · **Diperbaiki oleh:** Alifah
 
@@ -269,14 +258,12 @@ Diverifikasi dengan menyesuaikan spesifikasi dan menjalankan pytest dan lihat ha
 
 ---
 
----
-
 ## Bug 9: Subquery pada WHERE UPDATE salah ditandai sebagai operasi UPDATE
 
 **Ditemukan oleh:** Ganesh · **Diperbaiki oleh:** Ganesh
 
-**Gejala.** Input, output yang didapat, dan output yang diharapkan menurut SPESIFIKASI.md
-Subquery yang dipakai sebagai kondisi `WHERE` pada `UPDATE` ikut menandai tabel di dalam subquery sebagai tabel yang di-update. Padahal `UPDATE` hanya mengubah tabel target; tabel yang dibaca oleh `SELECT` di dalam subquery harus ditandai sebagai operasi baca (`R`).
+**Gejala.** Input, output yang didapat, dan output yang diharapkan menurut SPESIFIKASI.md\
+Apabila terdapat perintah `UPDATE` yang menggunakan kueri bersarang (`SELECT` atau subquery) di dalam kondisi `WHERE`, tabel yang berada di dalam subquery tersebut ikut dilabeli sebagai target operasi `U` (Update). Seharusnya, tabel di dalam subquery hanya ditandai sebagai operasi `R` (Read).
 
 **Reproduksi minimal.** SQL terpendek yang memicu bug:
 
@@ -284,20 +271,18 @@ Subquery yang dipakai sebagai kondisi `WHERE` pada `UPDATE` ikut menandai tabel 
 UPDATE pelanggan SET level = 1 WHERE id IN (SELECT id FROM pesanan);
 ```
 
-**Akar masalah.** Mengapa kode lama salah? Konsep apa yang dilanggar?
-Di `analyze_statement()` pada `crud/analyzer.py`, ekspresi `WHERE` untuk `UPDATE` dikumpulkan dengan operasi `U`. Saat penelusuran ekspresi mencapai subquery, operasi luar itu diteruskan ke SELECT di dalamnya. Akibatnya tabel `pesanan` salah diklasifikasikan sebagai `U`, meskipun subquery hanya membacanya. Analyzer perlu membedakan efek operasi statement luar dari operasi baca query bersarang.
+**Akar masalah.** Mengapa kode lama salah? Konsep apa yang dilanggar?\
+Pada fungsi `analyze_statement()`, ketika program menelusuri klausa `WHERE` pada perintah `UPDATE`, program meneruskan status operasi `"U"` secara turun-temurun ke cabang-cabang di bawahnya. Saat penelusuran (traversal) Abstract Syntax Tree (berdasarkan konsep Crafting Interpreters Bab 5) mencapai subquery, status `"U"` ini diwariskan ke perintah `SELECT`. Program gagal membatasi ruang lingkup pembaruan tabel utama dengan operasi pembacaan pada subquery.
 
-**Perbaikan.** File dan fungsi yang diubah, serta alasannya. Sebutkan juga perbaikan
-alternatif yang kalian pertimbangkan dan alasan tidak memilihnya.
-Di `_collect()` pada `crud/analyzer.py`, penelusuran untuk subquery `IN`, `EXISTS`, dan `Subquery` kini memanggil `_collect_select()` dengan operasi `R`. Dengan begitu tabel dalam SELECT bersarang diklasifikasikan sebagai dibaca, sementara tabel target UPDATE tetap `U`.
-Alternatif yang ditolak: mengganti seluruh pengumpulan ekspresi `WHERE` pada UPDATE menjadi `R`. Itu akan menghilangkan penandaan kolom/ekspresi terkait UPDATE yang masih mengikuti aturan operasi luar; operasi baca hanya diterapkan khusus pada SELECT bersarang.
+**Perbaikan.** File dan fungsi yang diubah, serta alasannya. Sebutkan juga perbaikan alternatif yang kalian pertimbangkan dan alasan tidak memilihnya.\
+Logika pada fungsi pengumpulan `(_collect())` disesuaikan. Apabila program menemukan operasi yang melibatkan subquery (seperti `IN`, `EXISTS`), program diinstruksikan untuk memaksa pengiriman parameter status `"R"`, alih-alih meneruskan status operasi dari luar. Dengan demikian, subquery di dalamnya dijamin selalu mendapatkan status baca.
+Alternatif yang ditolak: Mengubah seluruh penandaan di klausa `WHERE` pada perintah `UPDATE` menjadi `"R"`. Pendekatan ini ditolak karena akan merusak status pencatatan jika ada ekspresi di klausa `WHERE` yang merujuk langsung ke tabel utama.
 
 **Test regresi.** Nama test di `tests/test_tambahan.py` yang gagal sebelum perbaikan dan lulus
 sesudahnya.
 `test_bug9_update_subquery_read` memastikan matriks operasi berisi `pelanggan: U` dan `pesanan: R`.
 
-**Peran AI.** Apakah AI membantu menemukan atau memperbaiki bug ini? Bagaimana kalian
-memverifikasinya?
-AI membantu menelusuri pewarisan jenis operasi ke subquery dan menambahkan tes regresi. Diverifikasi dengan menjalankan `python -m pytest crud-extractor/tests/test_tambahan.py` (9 tes lulus).
+**Peran AI.** Apakah AI membantu menemukan atau memperbaiki bug ini? Bagaimana kalianmemverifikasinya?\
+AI membantu melacak asal parameter operasi yang terwariskan ke cabang di bawahnya dan membantu menyusun strategi agar status operasi tertahan menjadi `"R"` saat memasuki area subquery.
 
 ---

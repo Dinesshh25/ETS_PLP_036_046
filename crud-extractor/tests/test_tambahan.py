@@ -43,6 +43,7 @@ def test_bug_3_string_escaped_quote():
 
 
 def test_left_outer_join():
+    """Bug 6: Sintaks LEFT OUTER JOIN harus diterima oleh parser dan tidak menolak keyword opsional OUTER."""
     script = parse_sql("SELECT * FROM a LEFT OUTER JOIN b ON a.id = b.id;")
 
     assert script.errors == [], script.errors
@@ -50,6 +51,7 @@ def test_left_outer_join():
 
 
 def test_and_or():
+    """Bug 5: Presedensi operator AND harus lebih tinggi daripada OR sehingga OR menjadi node teratas di AST."""
     script = parse_sql("SELECT id FROM t WHERE a = 1 OR b = 2 AND c = 3;")
 
     assert script.errors == [], script.errors
@@ -92,6 +94,7 @@ def test_bug9_update_subquery_read():
 
 
 def test_next_statement():
+    """Bug 4: Panic mode error recovery harus berhenti di titik koma (;) dan tetap memproses statement valid berikutnya."""
     sql = "SELECT department_id FROM departments EXCEPT SELECT department_id FROM employees;"
     res = analyze_source(sql)
 

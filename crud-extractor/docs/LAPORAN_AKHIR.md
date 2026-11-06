@@ -67,10 +67,20 @@ Minimal tiga hal yang **tidak bisa** ditangani dengan benar oleh tool ini meskip
 sudah diperbaiki. Untuk tiap batas: contoh SQL atau situasinya, akibatnya pada CRUD matrix,
 dan informasi apa yang dibutuhkan untuk mengatasinya.
 
-1. 
-2. 
-3. 
+1. **Penggunaan Wildcard (`SELECT *` / `t.*`) dan Ketiadaan Skema Database**
+   - **Contoh SQL / Situasi:** `SELECT * FROM crm.pelanggan;`
+   - **Akibat pada CRUD matrix:** Tool dapat mengidentifikasi bahwa tabel `crm.pelanggan` mengalami operasi `R` (Read), namun **tidak dapat memetakan kolom apa saja yang sebenarnya dibaca** pada opsi laporan `--kolom`.
+   - **Informasi yang dibutuhkan:** Metadata skema database aktual (*data dictionary* atau definisi struktur tabel) agar parser dapat melakukan ekspansi dari karakter wildcard `*` menjadi daftar nama kolom konkret.
 
+2. **Kueri Kompleks seperti CTE (`WITH`), `UNION`, atau `MERGE`**
+   - **Contoh SQL / Situasi:** `WITH pelanggan_aktif AS (SELECT id FROM crm.pelanggan WHERE status = 'AKTIF') SELECT * FROM pelanggan_aktif;`
+   - **Akibat pada CRUD matrix:** Karena struktur `WITH` berada di luar aturan *grammar* parser saat ini, parser akan mendeteksi *parse error* dan memicu *panic mode recovery*. Akibatnya, pembacaan tabel `crm.pelanggan` di dalam CTE **terlewat (False Negative)** dan tidak tercatat di CRUD matrix.
+   - **Informasi yang dibutuhkan:** Penambahan aturan tata bahasa (*grammar rule*) baru pada `crud/parser.py` untuk mendukung sintaks CTE/UNION, serta dukungan pendaftaran tabel sementara (*temporary scope*) pada `crud/resolver.py`.
+
+3. **Pemanggilan Prosedur Tersimpan (*Stored Procedure*), *Trigger*, dan *View***
+   - **Contoh SQL / Situasi:** `CALL proses_rekap_bulanan();` atau `SELECT * FROM v_laporan_penjualan;`
+   - **Akibat pada CRUD matrix:** Perintah `CALL` tidak dikenali sebagai operasi pada tabel fisik, sedangkan kueri terhadap *view* `v_laporan_penjualan` hanya mencatat nama *view* tersebut. Tabel-tabel fisik di balik prosedur atau *view* (misalnya tabel `pesanan` atau `pembayaran`) **tidak akan terdeteksi sama sekali**.
+   - **Informasi yang dibutuhkan:** Kode sumber (*definition script*) dari *stored procedure* atau *view* tersebut, atau akses ke kamus data (*information schema*) database untuk melacak dependensi objek fisik di baliknya.
 ## 4. Pembagian kerja
 Proyek ini dikerjakan oleh kelompok beranggotakan dua orang (Alifah dan Ganesh) dengan pembagian modul dan tanggung jawab berbasis file untuk mencegah konflik git
 1. **Alifah**:
