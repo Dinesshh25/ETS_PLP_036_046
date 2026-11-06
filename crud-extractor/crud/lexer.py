@@ -107,15 +107,21 @@ class Lexer:
                 self._advance()
             return
         if ch == "/" and self._peek() == "*":
-            # TODO(T3): dukung komentar blok /* ... */ (SPESIFIKASI.md bagian 2.3).
-            self._advance()  # lewati '*'
+            # TODO(T3): Dukung komentar blok /* ... */ (SPESIFIKASI.md bagian 2.3).
+            # karakter '/' sudah dibaca di atas. sekarang lewati '*' pembuka komentar
+            self._advance()
             while True:
+                # jika mencapai akhir file (EOF) tanpa menemukan penutup '*/', lempar LexError
+                # dengan koordinat baris & kolom awal saat '/*' dibuka
                 if self._at_end():
                     raise LexError("komentar blok tidak ditutup", line, col)
+                # cek apakah menemukan pola penutup '*/' (lookahead 2 karakter).
                 if self._peek() == "*" and self._peek(1) == "/":
-                    self._advance()  # lewati '*'
-                    self._advance()  # lewati '/'
+                    self._advance()
+                    self._advance()
                     break
+                # karakter biasa (termasuk newline '\n') dilewati,
+                # _advance() otomatis menaikkan self.line dan mereset self.col saat ketemu '\n'.
                 self._advance()
             return
         if ch in _SINGLE:
@@ -125,7 +131,14 @@ class Lexer:
             self._add(TokenType.OP, ch, line, col)
             return
         if ch == "<":
-            op = "<=" if self._match("=") else "<"
+            # bug 2: terapkan not equal (SPESIFIKASI.md bagian 2.5)
+            # cek apakah '<' diikuti '=' (<=) atau '>' (<>), jika tidak maka '<' biasa.
+            if self._match("="):
+                op = "<="
+            elif self._match(">"):
+                op = "<>"  # operator tidak sama dengan, diambil sebagai 1 token utuh, bukan '<' lalu '>'
+            else:
+                op = "<"
             self._add(TokenType.OP, op, line, col)
             return
         if ch == ">":
@@ -166,8 +179,15 @@ class Lexer:
                 raise LexError("string tidak ditutup", line, col)
             ch = self._advance()
             if ch == "'":
-                break
-            chars.append(ch)
+                # bug 3: dua kutip berturut-turut ('') mewakili satu karakter kutip di dalam string (SPESIFIKASI.md 2.4)
+                if self._peek() == "'":
+                    self._advance()  # ambil kutip kedua
+                    chars.append("'")
+                else:
+                    # kutip penutup string tunggal
+                    break
+            else:
+                chars.append(ch)
         self._add(TokenType.STRING, "".join(chars), line, col)
 
     def _number(self, line: int, col: int) -> None:
@@ -185,8 +205,12 @@ class Lexer:
         while self._peek().isalnum() or self._peek() == "_":
             self._advance()
         text = self.src[start:self.pos]
-        if text in KEYWORDS:
-            self._add(TokenType.KEYWORD, text, line, col)
+        # bug 1: case sensitive (SPESIFIKASI.md 2.2)
+        # ubah ke huruf besar untuk mengecek apakah kata ini adalah keyword
+        upper = text.upper()
+        if upper in KEYWORDS:
+            # nilai token keyword selalu diubah ke huruf besar.
+            self._add(TokenType.KEYWORD, upper, line, col)
         else:
             self._add(TokenType.IDENT, text, line, col)
 

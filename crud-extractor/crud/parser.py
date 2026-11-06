@@ -213,7 +213,7 @@ class Parser:
             # TODO(T1): dukung INSERT INTO ... SELECT ... (SPESIFIKASI.md bagian 3 dan 5).
             # raise ParseError("INSERT ... SELECT belum didukung", self._peek())
             select_source = self._select()
-            return ast.Insert(table, columns, None, select_source, line=start.line)
+            return ast.Insert(table, columns, [], select_source, line=start.line)
         raise ParseError("diharapkan VALUES atau SELECT", self._peek())
 
     def _value_row(self) -> list:

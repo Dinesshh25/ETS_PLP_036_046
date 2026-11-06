@@ -85,15 +85,14 @@ class Resolver:
             self._declare(source.alias, None, source.line)
 
     def _lookup(self, name: str) -> ScopeEntry | None:
-        """Cari nama di rantai scope."""
-        chain = []
+        """ Bug 7: Cari nama di rantai scope mulai dari scope terdalam ke luar (SPESIFIKASI.md bagian 4.3).
+        Scope terdalam dicek lebih dulu agar alias di subquery menutupi alias luar (shadowing), dan jika tidak ada, merambat ke scope parent.
+        """
         scope = self.scope
         while scope is not None:
-            chain.append(scope)
-            scope = scope.parent
-        for scope in reversed(chain):
             if name in scope.entries:
                 return scope.entries[name]
+            scope = scope.parent
         return None
 
     # ---- statement ------------------------------------------------------
@@ -139,6 +138,9 @@ class Resolver:
         self._push()
         self._declare_source(dele.table)
         self._expr(dele.where)
+        # Bug 8: Tutup dan hilangkan scope setelah statement DELETE selesai (SPESIFIKASI.md 4.5).
+        # Mencegah alias dari statement DELETE bocor ke statement berikutnya di file yang sama.
+        self._pop()
 
     # ---- ekspresi -------------------------------------------------------
     def _expr(self, expr) -> None:
