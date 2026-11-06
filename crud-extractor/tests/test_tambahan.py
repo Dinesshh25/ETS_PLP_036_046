@@ -44,11 +44,6 @@ def test_bug_7_scope_shadowing_subquery():
     sql = "SELECT x.id FROM pelanggan x WHERE x.id IN (SELECT x.total FROM pesanan x)"
     script = parse_sql(sql)
     Resolver().resolve_script(script)
-    # Ambil kolom x.total di dalam subquery
     cols = [n for n in ast.iter_nodes(script) if isinstance(n, ast.ColumnRef) and n.name == "total"]
     assert len(cols) == 1
     assert cols[0].resolved == "pesanan"
-
-
-
-
