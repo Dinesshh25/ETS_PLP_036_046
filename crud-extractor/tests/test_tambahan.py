@@ -47,3 +47,15 @@ def test_bug_7_scope_shadowing_subquery():
     cols = [n for n in ast.iter_nodes(script) if isinstance(n, ast.ColumnRef) and n.name == "total"]
     assert len(cols) == 1
     assert cols[0].resolved == "pesanan"
+
+
+def test_bug_8_delete_scope_leak():
+    """Bug 8: Scope dari statement DELETE harus dibersihkan (_pop) agar tidak bocor ke statement berikutnya."""
+    sql = "DELETE FROM sesi s WHERE s.id = 1; SELECT s.id FROM pengguna u;"
+    script = parse_sql(sql)
+    resolver = Resolver()
+    diags = resolver.resolve_script(script)
+    assert resolver.scope is None
+    error_msgs = [d.message for d in diags if d.level == "error"]
+    assert any("alias 's' tidak terdefinisi" in m for m in error_msgs)
+

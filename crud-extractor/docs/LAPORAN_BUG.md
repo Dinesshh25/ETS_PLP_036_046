@@ -223,29 +223,36 @@ Diverifikasi dengan menyesuaikan spesifikasi dan menjalankan pytest serta lihat 
 
 ---
 
-## Bug 8: (Scope leak pada DELETE)
+## Bug 8: Bug 8: Alias DELETE bocor ke statement berikutnya (scope tidak di-pop)
 
-**Ditemukan oleh:** (nama) · **Diperbaiki oleh:** (nama)
+**Ditemukan oleh:** Alifah · **Diperbaiki oleh:** Alifah
 
 **Gejala.** Input, output yang didapat, dan output yang diharapkan menurut SPESIFIKASI.md
-(sebutkan bagiannya).
+Alias tabel dari DELETE (misalnya DELETE FROM sesi s) masih kebaca di statement berikutnya dalam file yang sama. Jadi statement setelahnya yang pakai alias s tanpa mendeklarasikannya tidak kena error, malah kolomnya ter-resolve ke tabel sesi. Menurut SPESIFIKASI.md bagian 4.5 (Setiap statement berdiri sendiri), setelah satu statement selesai tidak boleh ada scope tersisa, dan alias statement sebelumnya tidak boleh terlihat oleh statement berikutnya.
 
 **Reproduksi minimal.** SQL terpendek yang memicu bug:
 
 ```sql
-
+DELETE FROM sesi s WHERE s.id = 1;
+SELECT s.id FROM pengguna u;
 ```
 
 **Akar masalah.** Mengapa kode lama salah? Konsep apa yang dilanggar?
+Di _delete() pada resolver.py, scope dibuka pakai self._push() tapi tidak pernah ditutup pakai self._pop(). Jadi scope DELETE tetap nyangkut dan jadi parent buat statement berikutnya, makanya alias s masih ketemu. Padahal di Bab 11 (Resolving and Binding), bagian 11.3.1 "Resolving blocks", scope harus dibuka di awal dan ditutup di akhir, selalu berpasangan.
 
 **Perbaikan.** File dan fungsi yang diubah, serta alasannya. Sebutkan juga perbaikan
 alternatif yang kalian pertimbangkan dan alasan tidak memilihnya.
+Di _delete() pada resolver.py, di tambahkan self._pop() di akhir fungsi, setelah self._expr(dele.where). 
+Alternatif yang ditolak: mengosongkan self.scope = None di awal setiap statement. Ditolak karena itu cuma nutupin gejalanya, sedangkan push dan pop-nya tetap tidak berpasangan.
 
 **Test regresi.** Nama test di `tests/test_tambahan.py` yang gagal sebelum perbaikan dan lulus
 sesudahnya.
+test_bug_8_delete_scope_leak di tests/test_tambahan.py
 
 **Peran AI.** Apakah AI membantu menemukan atau memperbaiki bug ini? Bagaimana kalian
 memverifikasinya?
+AI membantu nelusuri kenapa push dan pop di _delete() tidak seimbang dan menyusun test. 
+Diverifikasi dengan menyesuaikan spesifikasi dan menjalankan pytest dan lihat hasil resolusinya di --ast.
 
 ---
 

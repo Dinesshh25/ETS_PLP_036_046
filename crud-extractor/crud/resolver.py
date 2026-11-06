@@ -138,6 +138,9 @@ class Resolver:
         self._push()
         self._declare_source(dele.table)
         self._expr(dele.where)
+        # Bug 8: Tutup dan hilangkan scope setelah statement DELETE selesai (SPESIFIKASI.md 4.5).
+        # Mencegah alias dari statement DELETE bocor ke statement berikutnya di file yang sama.
+        self._pop()
 
     # ---- ekspresi -------------------------------------------------------
     def _expr(self, expr) -> None:
