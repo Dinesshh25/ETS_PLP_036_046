@@ -181,22 +181,17 @@ class Resolver:
                 col.resolved = _target_of(entry)
             return
         else: 
-            current_scope = self.scope.entries
-
+            # TODO(T2): Resolusi kolom tanpa qualifier (SPESIFIKASI.md bagian 4.3).
+            # Mengambil scope terdalam saat ini. Jika statement tidak membuat scope
+            # (misalnya statement INSERT tanpa subquery, SPESIFIKASI.md bagian 4.1),
+            # self.scope bernilai None. Fallback ke dict kosong {} mencegah crash AttributeError.
+            current_scope = self.scope.entries if self.scope is not None else {}
             jumlah_tabel = len(current_scope)
             
             if jumlah_tabel == 1:
                 entry = list(current_scope.values())[0]
                 col.resolved = _target_of(entry)
-                
             elif jumlah_tabel > 1:
                 self._warning(f"kolom '{col.name}' ambigu tanpa skema", col.line)
-                
             else:   
                 self._warning(f"kolom '{col.name}' tidak memiliki tabel rujukan", col.line)
-        
-        # TODO(T2): kolom tanpa qualifier (SPESIFIKASI.md bagian 4.3).
-        #   - tepat satu tabel di scope terdalam -> isi col.resolved
-        #   - lebih dari satu tabel              -> warning "ambigu tanpa skema"
-        #   - tidak ada tabel                    -> warning
-        pass

@@ -137,9 +137,10 @@ def test_edge_case_3_chained_and_or_precedence():
 
 
 def test_edge_case_4_unqualified_column_ambiguous():
-    """Kasus tepi 4: Resolusi kolom tanpa qualifier saat query membaca lebih dari satu tabel (multi-table FROM).
-    Risiko: Tanpa skema database, tool tidak boleh menebak asal tabel sembarangan. Menurut SPESIFIKASI.md 4.3,
-    resolver wajib menghasilkan warning ambiguitas dan nilai ColumnRef.resolved harus tetap None.
+    """Kasus tepi 4: Resolusi kolom tanpa qualifier saat multi-tabel (>1 tabel) dan tanpa scope (0 tabel / scope None).
+    Risiko: Tanpa skema database, tool tidak boleh menebak asal tabel sembarangan (wajib warning dan resolved=None).
+    Selain itu, query tanpa scope seperti INSERT VALUES (SPESIFIKASI.md 4.1) rentan crash AttributeError jika resolver
+    tidak mengantisipasi self.scope yang bernilai None saat membaca kolom tanpa tabel rujukan (SPESIFIKASI.md 4.3).
     """
     script = parse_sql("SELECT id FROM pelanggan p, pesanan o;")
     resolver = Resolver()
@@ -148,6 +149,10 @@ def test_edge_case_4_unqualified_column_ambiguous():
     assert any("ambigu tanpa skema" in m for m in warnings)
     col = [n for n in ast.iter_nodes(script) if isinstance(n, ast.ColumnRef)][0]
     assert col.resolved is None
+    script2 = parse_sql("INSERT INTO t VALUES (id_tanpa_tabel);")
+    resolver2 = Resolver()
+    diags2 = resolver2.resolve_script(script2)
+    assert any("tidak memiliki tabel rujukan" in d.message for d in diags2)
 
 
 def test_edge_case_5_multi_level_subquery_shadowing():
