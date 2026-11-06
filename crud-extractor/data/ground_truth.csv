@@ -1,6 +1,5 @@
 file,baris,tabel,operasi
 campuran_error.sql,2,pelanggan,R
-# menambahkan baris 4 untuk read dari tabel pesanan 
 campuran_error.sql,4,pesanan,R 
 campuran_error.sql,6,produk,U
 campuran_error.sql,8,keranjang,D
