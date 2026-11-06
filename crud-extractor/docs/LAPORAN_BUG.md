@@ -64,8 +64,8 @@ test_bug_2_operator_not_equal di tests/test_tambahan.py
 
 **Peran AI.** Apakah AI membantu menemukan atau memperbaiki bug ini? Bagaimana kalian
 memverifikasinya?
-AI membantu menemukan bug dan menyusun tes.
-Diverifikasi dengan menjalankan pytest sebelum dan sesudah perbaikan, lalu dicocokkan lagi dengan spesifikasi.
+AI mengonfirmasi bahwa ini pelanggaran maximal munch dan menjelaskan struktur cabang untuk < serta menyusun tes.
+Diverifikasi dengan menjalankan pytest, lalu dicocokkan lagi dengan spesifikasi.
 
 ---
 
@@ -251,7 +251,7 @@ test_bug_8_delete_scope_leak di tests/test_tambahan.py
 
 **Peran AI.** Apakah AI membantu menemukan atau memperbaiki bug ini? Bagaimana kalian
 memverifikasinya?
-AI membantu nelusuri kenapa push dan pop di _delete() tidak seimbang dan menyusun test. 
+AI membantu nelusuri kenapa push dan pop di _delete() tidak seimbang dan kenapa _push tanpa _pop membuat scope bocor serta menyusun test. 
 Diverifikasi dengan menyesuaikan spesifikasi dan menjalankan pytest dan lihat hasil resolusinya di --ast.
 
 ---
