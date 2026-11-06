@@ -115,10 +115,10 @@ class Lexer:
                 # dengan koordinat baris & kolom awal saat '/*' dibuka
                 if self._at_end():
                     raise LexError("komentar blok tidak ditutup", line, col)
-                # Cek apakah menemukan pola penutup '*/' (lookahead 2 karakter).
+                # cek apakah menemukan pola penutup '*/' (lookahead 2 karakter).
                 if self._peek() == "*" and self._peek(1) == "/":
-                    self._advance()  # Konsumsi '*'
-                    self._advance()  # Konsumsi '/'
+                    self._advance()
+                    self._advance()
                     break
                 # karakter biasa (termasuk newline '\n') dilewati,
                 # _advance() otomatis menaikkan self.line dan mereset self.col saat ketemu '\n'.
@@ -131,12 +131,12 @@ class Lexer:
             self._add(TokenType.OP, ch, line, col)
             return
         if ch == "<":
-            # Bug 2: Terapkan maximal munch (SPESIFIKASI.md bagian 2.5).
-            # Cek apakah '<' diikuti '=' (<=) atau '>' (<>), jika tidak maka '<' biasa.
+            # bug 2: terapkan not equal (SPESIFIKASI.md bagian 2.5)
+            # cek apakah '<' diikuti '=' (<=) atau '>' (<>), jika tidak maka '<' biasa.
             if self._match("="):
                 op = "<="
             elif self._match(">"):
-                op = "<>"  # Operator tidak sama dengan: diambil sebagai 1 token utuh, bukan '<' lalu '>'
+                op = "<>"  # operator tidak sama dengan, diambil sebagai 1 token utuh, bukan '<' lalu '>'
             else:
                 op = "<"
             self._add(TokenType.OP, op, line, col)
@@ -179,8 +179,15 @@ class Lexer:
                 raise LexError("string tidak ditutup", line, col)
             ch = self._advance()
             if ch == "'":
-                break
-            chars.append(ch)
+                # bug 3: dua kutip berturut-turut ('') mewakili satu karakter kutip di dalam string (SPESIFIKASI.md 2.4)
+                if self._peek() == "'":
+                    self._advance()  # ambil kutip kedua
+                    chars.append("'")
+                else:
+                    # kutip penutup string tunggal
+                    break
+            else:
+                chars.append(ch)
         self._add(TokenType.STRING, "".join(chars), line, col)
 
     def _number(self, line: int, col: int) -> None:
@@ -198,7 +205,8 @@ class Lexer:
         while self._peek().isalnum() or self._peek() == "_":
             self._advance()
         text = self.src[start:self.pos]
-        # ubah ke huruf besar untuk mengecek apakah kata ini adalah keyword (SPESIFIKASI.md bagian 2.2)
+        # bug 1: case sensitive (SPESIFIKASI.md 2.2)
+        # ubah ke huruf besar untuk mengecek apakah kata ini adalah keyword
         upper = text.upper()
         if upper in KEYWORDS:
             # nilai token keyword selalu diubah ke huruf besar.
