@@ -5,9 +5,10 @@ Isi dengan:
    lulus sesudahnya). Beri nama yang menjelaskan bug-nya.
 2. Lima test kasus tepi, masing-masing dengan komentar singkat mengapa kasus itu berisiko.
 """
+import pytest
 from crud import ast_nodes as ast
 from crud.analyzer import analyze_statement
-from crud.lexer import TokenType as T, tokenize
+from crud.lexer import LexError, TokenType as T, tokenize
 from crud.parser import parse_sql
 from crud.pipeline import analyze_source
 from crud.resolver import Resolver
@@ -40,6 +41,7 @@ def test_bug_3_string_escaped_quote():
     assert tokens[0].type == T.STRING and tokens[0].value == "O'Brien"
     assert tokens[1].type == T.STRING and tokens[1].value == "It's ok"
 
+
 def test_left_outer_join():
     script = parse_sql("SELECT * FROM a LEFT OUTER JOIN b ON a.id = b.id;")
 
@@ -54,6 +56,7 @@ def test_and_or():
     where = script.statements[0].where
     assert isinstance(where, ast.BinaryOp) and where.op == "OR"
     assert isinstance(where.right, ast.BinaryOp) and where.right.op == "AND"
+
 
 def test_bug_7_scope_shadowing_subquery():
     """Bug 7: Pencarian scope harus dari dalam ke luar sehingga alias di subquery menutupi alias luar (shadowing)."""
@@ -95,3 +98,73 @@ def test_next_statement():
     assert len(res.parse_errors) == 1
     assert len(res.statements) == 1
     assert res.statements[0].tables == {"employees": "R"}
+
+
+# LIMA TEST KASUS TEPI (EDGE CASES) DENGAN KOMENTAR RISIKO
+
+def test_edge_case_1_unclosed_block_comment():
+    """Kasus tepi 1: Komentar blok yang tidak ditutup sampai akhir file (EOF).
+    Risiko: Scanner berisiko loop tak hingga atau crash jika pengecekan EOF tidak
+    ketat saat mencari penutup '*/'. Menurut SPESIFIKASI.md 2.3, harus melempar LexError.
+    """
+    with pytest.raises(LexError) as exc_info:
+        tokenize("SELECT 1; /* komentar yang lupa ditutup")
+    assert "tidak ditutup" in str(exc_info.value)
+
+
+def test_edge_case_2_consecutive_escaped_quotes_only():
+    """Kasus tepi 2: String yang hanya berisi escape kutip ganda berturut-turut ('''' mewakili satu karakter kutip tunggal).
+    Risiko: Rentan error off-by-one pada lookahead _peek(). Jika scanner salah mengonsumsi karakter kutip
+    penutup sebagai bagian dari escape, string akan dianggap tidak ditutup (unclosed string LexError).
+    """
+    tokens = tokenize("''''")
+    assert len(tokens) == 2  # STRING + EOF
+    assert tokens[0].type == T.STRING
+    assert tokens[0].value == "'"
+
+
+def test_edge_case_3_chained_and_or_precedence():
+    """Kasus tepi 3: Rantai logika kompleks kombinasi AND dan OR (A AND B OR C AND D).
+    Risiko: Struktur pohon AST berisiko salah asosiatif jika pemanggilan rekursif grammar
+    tidak mengikat AND lebih kuat di kedua sisi percabangan OR.
+    """
+    script = parse_sql("SELECT * FROM t WHERE a = 1 AND b = 2 OR c = 3 AND d = 4;")
+    assert script.errors == []
+    where = script.statements[0].where
+    assert isinstance(where, ast.BinaryOp) and where.op == "OR"
+    assert isinstance(where.left, ast.BinaryOp) and where.left.op == "AND"
+    assert isinstance(where.right, ast.BinaryOp) and where.right.op == "AND"
+
+
+def test_edge_case_4_unqualified_column_ambiguous():
+    """Kasus tepi 4: Resolusi kolom tanpa qualifier saat query membaca lebih dari satu tabel (multi-table FROM).
+    Risiko: Tanpa skema database, tool tidak boleh menebak asal tabel sembarangan. Menurut SPESIFIKASI.md 4.3,
+    resolver wajib menghasilkan warning ambiguitas dan nilai ColumnRef.resolved harus tetap None.
+    """
+    script = parse_sql("SELECT id FROM pelanggan p, pesanan o;")
+    resolver = Resolver()
+    diags = resolver.resolve_script(script)
+    warnings = [d.message for d in diags if d.level == "warning"]
+    assert any("ambigu tanpa skema" in m for m in warnings)
+    col = [n for n in ast.iter_nodes(script) if isinstance(n, ast.ColumnRef)][0]
+    assert col.resolved is None
+
+
+def test_edge_case_5_multi_level_subquery_shadowing():
+    """Kasus tepi 5: Shadowing nama alias yang sama di tiga level hierarki subquery bersarang.
+    Risiko: Struktur resolver berbasis lexical stack rentan mengalami kebocoran scope atau salah
+    referensi parent jika penelusuran AST dari scope terdalam ke scope luar tidak terisolasi sempurna.
+    """
+    sql = (
+        "SELECT t.a FROM x t WHERE t.id IN ("
+        "  SELECT t.b FROM y t WHERE t.id IN ("
+        "    SELECT t.c FROM z t"
+        "  )"
+        ")"
+    )
+    script = parse_sql(sql)
+    Resolver().resolve_script(script)
+    cols = [n for n in ast.iter_nodes(script) if isinstance(n, ast.ColumnRef)]
+    assert cols[0].resolved == "x"
+    assert cols[2].resolved == "y"
+    assert cols[4].resolved == "z"
