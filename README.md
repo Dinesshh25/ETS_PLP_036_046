@@ -1,4 +1,4 @@
-# Ekstraktor CRUD Matrix
+# Ekstraktor CRUD Matrix (ETS PLP)
 
 Ekstraktor CRUD Matrix adalah sebuah *tool* berbasis Python yang berfungsi untuk membaca file skrip SQL dan menghasilkan matriks CRUD (Create, Read, Update, Delete). *Tool* ini menganalisis operasi apa saja yang dilakukan terhadap tabel-tabel di dalam *database* tanpa memerlukan koneksi langsung ke *database* atau skema aktif, melainkan murni melalui analisis teks kueri SQL.
 
