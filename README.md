@@ -68,5 +68,5 @@ python -m pytest
 
 ## Tim Pengembang
 Proyek ini dikerjakan secara *Pair Programming* oleh:
-* **Alifah** - (Lexer & Resolver)
-* **Ganesh** - (Parser & Analyzer)
+* **Alifah** - (Lexer & Resolver) NIM 251524036
+* **Ganesh** - (Parser & Analyzer) NIM 251524046
