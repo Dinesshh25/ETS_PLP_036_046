@@ -19,6 +19,5 @@ Catat setiap penggunaan AI atau coding agent yang memengaruhi kode atau laporan.
 | 13 | Ganesh | Subquery di UPDATE salah ditandai "U" (Bug 9), tanya darimana bocornya status operasi ini. | Diterima | AI membantu melacak adanya pewarisan jenis operasi ke dalam subquery dan memberi ide memaksakan parameter "R" di fungsi `_collect`. | Jalankan `test_bug9_update_subquery_read` dan lihat hasil triple matrix. |
 
 
-**Refleksi (3-5 kalimat).** Di bagian mana AI paling membantu? Di mana AI keliru atau
-menyesatkan, dan bagaimana kalian mengetahuiya?
+**Refleksi (3-5 kalimat).** 
 AI paling membantu waktu masih bingung memahami tugasnya, karena deskripsi dan instruksinya tersebar di PDF, spesifikasi, dan komentar di kode, jadi breakdown dari AI bikin proses mulai mengerjakan jadi lebih jelas. AI juga membantu menjelaskan kenapa sebuah bug terjadi dan nyambung ke konsep di buku. AI paling sering keliru atau menyesatkan kalau konteksnya kurang seperti pembagian TODO-nya salah, nama fungsi di contoh kodenya tidak ada di kode proyek, dan ada saran untuk hal yang sebenarnya sudah ada. Kesalahan itu ketahuan setelah membaca kodenya langsung, menjalankan pytest, lalu mencocokkan lagi dengan SPESIFIKASI.md dan bukunya, jadi semua jawaban AI dicek dulu sebelum dipakai.

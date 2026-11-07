@@ -1,8 +1,7 @@
 # Laporan Akhir
 
 ## 1. Hasil evaluasi
-
-Tempel keluaran `python evaluate.py` setelah `data/ground_truth.csv` dilengkapi.
+keluaran `python evaluate.py` setelah `data/ground_truth.csv` dilengkapi.
 
 ```text
 Dievaluasi: audit.sql, campuran_error.sql, laporan_penjualan.sql, pemeliharaan.sql (27 triple)
