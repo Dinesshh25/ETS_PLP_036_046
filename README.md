@@ -17,7 +17,7 @@ Pemrosesan kueri SQL dilakukan melalui empat tahapan utama secara berurutan:
 
 ## Instalasi
 1. Kloning repositori ini ke dalam mesin lokal Anda.
-2. Buka terminal dan arahkan ke direktori proyek (`crud-extractor`).
+2. Buka terminal dan arahkan ke direktori utama repositori ini.
 3. Instal *package* yang dibutuhkan (hanya `pytest` untuk *testing*):
    ```bash
    python -m pip install pytest

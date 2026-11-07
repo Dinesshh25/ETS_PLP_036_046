@@ -130,7 +130,7 @@ AI membantu merumuskan token apa saja yang tepat untuk dijadikan titik sinkronis
 
 **Ditemukan oleh:** Ganesh · **Diperbaiki oleh:** Ganesh
 
-**Gejala.**   \
+**Gejala.**   
 Ketika sebuah kueri menggunakan operator AND dan OR secara bersamaan, parser menganggap keduanya memiliki tingkat prioritas yang sama. Akibatnya, ekspresi a = 1 OR b = 2 AND c = 3 dievaluasi mendatar dari kiri ke kanan menjadi (a = 1 OR b = 2) AND c = 3. Padahal, operasi AND seharusnya dikerjakan lebih dahulu.
 
 **Reproduksi minimal.**  
@@ -178,7 +178,7 @@ Alternatif yang ditolak: Membuat jenis join baru khusus untuk `OUTER`. Keputusan
 **Test regresi.** \
 `test_left_outer_join` memastikan tidak ada parse error dan jenis join pada AST bernilai `LEFT`.
 
-**Peran AI.** Apakah AI membantu menemukan atau memperbaiki bug ini? Bagaimana kalian memverifikasinya?\
+**Peran AI.**   
 Tidak ada penggunaan AI untuk menemukan atau memperbaiki bug ini. Pemecahan masalah dan verifikasi dilakukan murni dengan mencocokkan kode terhadap dokumen SPESIFIKASI.md secara mandiri dan menjalankan evaluasi pengujian.
 
 ---
@@ -248,7 +248,7 @@ Diverifikasi dengan menyesuaikan spesifikasi dan menjalankan pytest dan lihat ha
 
 **Ditemukan oleh:** Ganesh · **Diperbaiki oleh:** Ganesh
 
-**Gejala.**  \
+**Gejala.**  
 Apabila terdapat perintah `UPDATE` yang menggunakan kueri bersarang (`SELECT` atau subquery) di dalam kondisi `WHERE`, tabel yang berada di dalam subquery tersebut ikut dilabeli sebagai target operasi `U` (Update). Seharusnya, tabel di dalam subquery hanya ditandai sebagai operasi `R` (Read).
 
 **Reproduksi minimal.**  
@@ -257,7 +257,7 @@ Apabila terdapat perintah `UPDATE` yang menggunakan kueri bersarang (`SELECT` at
 UPDATE pelanggan SET level = 1 WHERE id IN (SELECT id FROM pesanan);
 ```
 
-**Akar masalah.**  \
+**Akar masalah.**  
 Pada fungsi `analyze_statement()`, ketika program menelusuri klausa `WHERE` pada perintah `UPDATE`, program meneruskan status operasi `"U"` secara turun-temurun ke cabang-cabang di bawahnya. Saat penelusuran (traversal) Abstract Syntax Tree (berdasarkan konsep Crafting Interpreters Bab 5) mencapai subquery, status `"U"` ini diwariskan ke perintah `SELECT`. Program gagal membatasi ruang lingkup pembaruan tabel utama dengan operasi pembacaan pada subquery.
 
 **Perbaikan.** \
